@@ -1,6 +1,6 @@
 plugins {
     id 'com.jfrog.bintray'
-    id 'java'
+    id 'java-library'
     id 'groovy'
     id 'maven-publish'
 }
@@ -31,6 +31,27 @@ sourceSets.main {
     }
 }
 
+sourceSets.test {
+    java {
+        srcDirs = ['test']
+    }
+    groovy {
+        srcDirs = ['test']
+    }
+    resources {
+        srcDirs += "$buildDir/fixtures"
+    }
+}
+
+tasks.register('copySample', Copy) {
+    from "$rootProject.rootDir/examples/spring-boot"
+    into "$buildDir/fixtures/spring-boot"
+}
+
+tasks.withType(Test).configureEach {
+    dependsOn copySample
+}
+
 jar {
     metaInf.from 'src/META-INF'
 }
@@ -46,6 +67,11 @@ dependencies {
     compileOnly 'com.android.tools.build:gradle:3.0.0'
     compile gradleApi()
     compile localGroovy()
+    testImplementation gradleTestKit()
+    testImplementation 'junit:junit:4.13'
+    testImplementation "org.spockframework:spock-core:1.1-groovy-2.4@jar"
+    testRuntime 'cglib:cglib-nodep:3.2.12'
+    testRuntime 'org.objenesis:objenesis:3.1'
 }
 
 publishing {
