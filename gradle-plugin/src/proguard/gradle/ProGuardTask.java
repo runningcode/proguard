@@ -24,6 +24,7 @@ import groovy.lang.Closure;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.*;
 import org.gradle.api.logging.*;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.*;
 import org.gradle.api.tasks.Optional;
 import proguard.*;
@@ -31,6 +32,7 @@ import proguard.classfile.*;
 import proguard.classfile.util.ClassUtil;
 import proguard.util.ListUtil;
 
+import javax.inject.Inject;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -40,8 +42,16 @@ import java.util.*;
  *
  * @author Eric Lafortune
  */
-public class ProGuardTask extends DefaultTask
+@CacheableTask
+abstract class ProGuardTask extends DefaultTask
 {
+
+    @Inject
+    abstract ProjectLayout getProjectLayout();
+
+    @Inject
+    abstract ObjectFactory getObjectFactory();
+
     // Accumulated input and output, for the sake of Gradle's lazy file
     // resolution and lazy task execution.
     private final List          inJarFiles         = new ArrayList();
@@ -68,30 +78,30 @@ public class ProGuardTask extends DefaultTask
     // (private or not) don't seem to work. Private methods don't work either,
     // but package visible or protected methods are ok.
 
-    @InputFiles
+    @Classpath
     protected FileCollection getInJarFileCollection()
     {
         return getProject().files(inJarFiles);
     }
 
-    @Optional @OutputFiles
+    @OutputFiles
     protected FileCollection getOutJarFileCollection()
     {
-        return getProject().files(outJarFiles);
+        return getObjectFactory().fileCollection().from(getProject().files(outJarFiles)).builtBy(this);
     }
 
-    @InputFiles
+    @Classpath
     protected FileCollection getLibraryJarFileCollection()
     {
         return getProject().files(libraryJarFiles);
     }
 
     @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
     protected FileCollection getConfigurationFileCollection()
     {
         return getProject().files(configurationFiles);
     }
-
 
     // Convenience methods to retrieve settings from outside the task.
 
@@ -99,6 +109,7 @@ public class ProGuardTask extends DefaultTask
      * Returns the collected list of input files (directory, jar, aar, etc,
      * represented as Object, String, File, etc).
      */
+    @Internal
     public List getInJarFiles()
     {
         return inJarFiles;
@@ -108,6 +119,7 @@ public class ProGuardTask extends DefaultTask
      * Returns the collected list of filters (represented as argument Maps)
      * corresponding to the list of input files.
      */
+    @Input
     public List getInJarFilters()
     {
         return inJarFilters;
@@ -117,6 +129,7 @@ public class ProGuardTask extends DefaultTask
      * Returns the collected list of output files (directory, jar, aar, etc,
      * represented as Object, String, File, etc).
      */
+    @Internal
     public List getOutJarFiles()
     {
         return outJarFiles;
@@ -126,6 +139,7 @@ public class ProGuardTask extends DefaultTask
      * Returns the collected list of filters (represented as argument Maps)
      * corresponding to the list of output files.
      */
+    @Input
     public List getOutJarFilters()
     {
         return outJarFilters;
@@ -139,6 +153,7 @@ public class ProGuardTask extends DefaultTask
      *   the contents of the first 2 input files go to the first output file and
      *   the contents of the next 3 input files go to the second output file.
      */
+    @Internal
     public List getInJarCounts()
     {
         return inJarCounts;
@@ -148,6 +163,7 @@ public class ProGuardTask extends DefaultTask
      * Returns the collected list of library files (directory, jar, aar, etc,
      * represented as Object, String, File, etc).
      */
+    @Internal
     public List getLibraryJarFiles()
     {
         return libraryJarFiles;
@@ -157,6 +173,7 @@ public class ProGuardTask extends DefaultTask
      * Returns the collected list of filters (represented as argument Maps)
      * corresponding to the list of library files.
      */
+    @Input
     public List getLibraryJarFilters()
     {
         return libraryJarFilters;
@@ -166,6 +183,7 @@ public class ProGuardTask extends DefaultTask
      * Returns the collected list of configuration files to be included
      * (represented as Object, String, File, etc).
      */
+    @Internal
     public List getConfigurationFiles()
     {
         return configurationFiles;
@@ -245,6 +263,7 @@ public class ProGuardTask extends DefaultTask
     }
 
     // Hack: support the keyword without parentheses in Groovy.
+    @Internal
     public Object getdontskipnonpubliclibraryclassmembers()
     {
         dontskipnonpubliclibraryclassmembers();
@@ -257,6 +276,7 @@ public class ProGuardTask extends DefaultTask
     }
 
     // Hack: support the keyword without parentheses in Groovy.
+    @Internal
     public Object getkeepdirectories()
     {
         keepdirectories();
